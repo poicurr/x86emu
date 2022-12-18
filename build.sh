@@ -25,7 +25,6 @@ function run {
   ${BUILD_DIR}/src/main.bin
 }
 
-
 clean
 build
 run

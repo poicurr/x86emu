@@ -16,15 +16,12 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  file.read(emu.memory, sizeof(uint8_t) * 1024);
+  file.read(emu.memory, 0x200);
 
-  emu.init_instructions();
   while (emu.eip < MEMORY_SIZE) {
     uint8_t code = emu.get_code8(0);
     printf("EIP = %X, Code = %02X\n", emu.eip, code);
-
     emu.instructions[code]();
-
     if (emu.eip == 0x00) {
       printf("\n\nend of program.\n\n");
       break;

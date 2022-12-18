@@ -17,6 +17,7 @@ struct Emulator {
     memory = new char[size];
     eip = eip;
     registers[ESP] = esp;
+    init_instructions();
   }
   virtual ~Emulator() { delete memory; }
 
