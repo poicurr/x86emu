@@ -14,9 +14,9 @@ const char* registers_name[] = {"EAX", "ECX", "EDX", "EBX",
 struct Emulator {
   Emulator(size_t size, uint32_t eip, uint32_t esp) {
     memset(registers, 0, sizeof(registers));
-    memory = new char[size];
-    eip = eip;
-    registers[ESP] = esp;
+    this->memory = new char[size];
+    this->eip = eip;
+    this->registers[ESP] = esp;
     init_instructions();
   }
   virtual ~Emulator() { delete memory; }

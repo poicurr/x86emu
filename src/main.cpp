@@ -9,13 +9,13 @@ int main(int argc, char* argv[]) {
     std::cerr << "usage: px86 filename" << std::endl;
     return 1;
   }
-  Emulator emu(MEMORY_SIZE, 0x0000, 0x7c00);
   std::ifstream file(argv[1], std::ios::binary);
   if (!file.is_open()) {
     std::cerr << "[error] failed to open file" << std::endl;
     return 1;
   }
 
+  Emulator emu(MEMORY_SIZE, 0x0000, 0x7c00);
   file.read(emu.memory, 0x200);
 
   while (emu.eip < MEMORY_SIZE) {
