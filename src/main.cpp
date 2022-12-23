@@ -9,14 +9,16 @@ int main(int argc, char* argv[]) {
     std::cerr << "usage: px86 filename" << std::endl;
     return 1;
   }
-  std::ifstream file(argv[1], std::ios::binary);
-  if (!file.is_open()) {
-    std::cerr << "[error] failed to open file" << std::endl;
+  Emulator emu(MEMORY_SIZE, 0x7c00, 0x7c00);
+
+  FILE* binary = fopen(argv[1], "rb");
+  if (binary == NULL) {
+    printf("%s: failed to open file\n", argv[1]);
     return 1;
   }
 
-  Emulator emu(MEMORY_SIZE, 0x0000, 0x7c00);
-  file.read(emu.memory, 0x200);
+  fread(emu.memory + 0x7c00, 1, 0x200, binary);
+  fclose(binary);
 
   while (emu.eip < MEMORY_SIZE) {
     uint8_t code = emu.get_code8(0);

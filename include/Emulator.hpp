@@ -14,9 +14,10 @@ const char* registers_name[] = {"EAX", "ECX", "EDX", "EBX",
 struct Emulator {
   Emulator(size_t size, uint32_t eip, uint32_t esp) {
     memset(registers, 0, sizeof(registers));
-    this->memory = new char[size];
-    this->eip = eip;
     this->registers[ESP] = esp;
+    this->memory = new uint8_t[size];
+    this->eip = eip;
+    this->eflags = 0;
     init_instructions();
   }
   virtual ~Emulator() { delete memory; }
@@ -34,11 +35,11 @@ struct Emulator {
 
   uint32_t get_code32(int index) {
     uint32_t ret = 0;
-    for (int i = 0; i < 4; ++i) {
-      ret |= get_code8(index + i) << (i * 8);
-    }
+    for (int i = 0; i < 4; i++) ret |= get_code8(index + i) << (i * 8);
     return ret;
   }
+
+  int32_t get_sign_code32(int index) { return (int32_t)get_code32(index); }
 
   void mov_r32_imm32() {
     uint8_t reg = get_code8(0) - 0xB8;
@@ -52,18 +53,24 @@ struct Emulator {
     eip += (diff + 2);
   }
 
+  void near_jump() {
+    int32_t diff = get_sign_code32(1);
+    eip += (diff + 5);
+  }
+
   using instruction_func_t = std::function<void()>;
   std::vector<instruction_func_t> instructions;
   void init_instructions() {
     instructions.reserve(256);
     for (int i = 0; i < 8; ++i) {
-      instructions[0xB8 + i] = [this]() { mov_r32_imm32(); };
+      instructions[0xB8 + i] = [&]() { mov_r32_imm32(); };
     }
-    instructions[0xEB] = [this]() { short_jump(); };
+    instructions[0xE9] = [&]() { near_jump(); };
+    instructions[0xEB] = [&]() { short_jump(); };
   }
 
   uint32_t registers[REGISTERS_COUNT];
-  uint32_t eflags;
-  char* memory;
+  uint8_t* memory;
   uint32_t eip;
+  uint32_t eflags;
 };

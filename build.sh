@@ -20,12 +20,6 @@ function build {
   fi
 }
 
-function run {
-  echo "-- Running program"
-  ${BUILD_DIR}/src/main.bin
-}
-
 clean
 build
-run
 
