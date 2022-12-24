@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include <Emulator.hpp>
 #include <fstream>
 #include <iostream>
@@ -11,14 +13,18 @@ int main(int argc, char* argv[]) {
   }
   Emulator emu(MEMORY_SIZE, 0x7c00, 0x7c00);
 
-  FILE* binary = fopen(argv[1], "rb");
-  if (binary == NULL) {
-    printf("%s: failed to open file\n", argv[1]);
+  std::ifstream ifs(argv[1], std::ios::binary);
+  if (!ifs.is_open()) {
+    printf("failed to open file: %s\n", argv[1]);
     return 1;
   }
-
-  fread(emu.memory + 0x7c00, 1, 0x200, binary);
-  fclose(binary);
+  auto binary = std::string{};
+  char buffer[1024];
+  while (!ifs.eof()) {
+    ifs.read(buffer, 1024);
+    binary.append(buffer, ifs.gcount());
+  }
+  memcpy(emu.memory + 0x7c00, binary.data(), binary.size());
 
   while (emu.eip < MEMORY_SIZE) {
     uint8_t code = emu.get_code8(0);
