@@ -195,6 +195,13 @@ struct Emulator {
     set_rm32(&modrm, rm32 + r32);
   }
 
+  void add_rm32_imm8(ModRM* modrm) {
+    uint32_t rm32 = get_rm32(modrm);
+    uint32_t imm8 = (int32_t)get_sign_code8(0);
+    eip += 1;
+    set_rm32(modrm, rm32 + imm8);
+  }
+
   void sub_rm32_imm8(ModRM* modrm) {
     uint32_t rm32 = get_rm32(modrm);
     uint32_t imm8 = (int32_t)get_sign_code8(0);
@@ -208,6 +215,9 @@ struct Emulator {
     parse_modrm(&modrm);
 
     switch (modrm.opecode) {
+      case 0:
+        add_rm32_imm8(&modrm);
+        break;
       case 5:
         sub_rm32_imm8(&modrm);
         break;
@@ -235,6 +245,58 @@ struct Emulator {
         printf("not implemented: FF /%d\n", modrm.opecode);
         exit(1);
     }
+  }
+
+  void push_r32() {
+    uint8_t reg = get_code8(0) - 0x50;
+    push32(get_register32(reg));
+    eip += 1;
+  }
+
+  void pop_r32() {
+    uint8_t reg = get_code8(0) - 0x58;
+    set_register32(reg, pop32());
+    eip += 1;
+  }
+
+  void push32(uint32_t value) {
+    uint32_t address = get_register32(ESP) - 4;
+    set_register32(ESP, address);
+    set_memory32(address, value);
+  }
+
+  uint32_t pop32() {
+    uint32_t address = get_register32(ESP);
+    uint32_t ret = get_memory32(address);
+    set_register32(ESP, address + 4);
+    return ret;
+  }
+
+  void push_imm32() {
+    uint32_t value = get_code32(1);
+    push32(value);
+    eip += 5;
+  }
+
+  void push_imm8() {
+    uint8_t value = get_code8(1);
+    push32(value);
+    eip += 2;
+  }
+
+  void call_rel32() {
+    int32_t diff = get_sign_code32(1);
+    push32(eip + 5);
+    eip += (diff + 5);
+  }
+
+  void ret() { eip = pop32(); }
+
+  void leave() {
+    uint32_t ebp = get_register32(EBP);
+    set_register32(ESP, ebp);
+    set_register32(EBP, pop32());
+    eip += 1;
   }
 
   void short_jump() {
@@ -274,15 +336,27 @@ struct Emulator {
   std::vector<instruction_func_t> instructions;
   void init_instructions() {
     instructions.reserve(256);
-    for (int i = 0; i < 8; ++i) {
-      instructions[0xB8 + i] = [&]() { mov_r32_imm32(); };
-    }
+
     instructions[0x01] = [&]() { add_rm32_r32(); };
+
+    for (int i = 0; i < 8; i++) instructions[0x50 + i] = [&]() { push_r32(); };
+    for (int i = 0; i < 8; i++) instructions[0x58 + i] = [&]() { pop_r32(); };
+
+    instructions[0x68] = [&]() { push_imm32(); };
+    instructions[0x6A] = [&]() { push_imm8(); };
+
     instructions[0x83] = [&]() { code_83(); };
     instructions[0x89] = [&]() { mov_rm32_r32(); };
     instructions[0x8B] = [&]() { mov_r32_rm32(); };
+
+    for (int i = 0; i < 8; ++i)
+      instructions[0xB8 + i] = [&]() { mov_r32_imm32(); };
+
+    instructions[0xC3] = [&]() { ret(); };
     instructions[0xC7] = [&]() { mov_rm32_imm32(); };
+    instructions[0xC9] = [&]() { leave(); };
     instructions[0xFF] = [&]() { code_ff(); };
+    instructions[0xE8] = [&]() { call_rel32(); };
     instructions[0xE9] = [&]() { near_jump(); };
     instructions[0xEB] = [&]() { short_jump(); };
   }
